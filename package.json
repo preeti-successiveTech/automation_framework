@@ -5,12 +5,13 @@
   "main": "index.js",
   "scripts": {
     "test": "cucumber-js",
-    "test:ui": "cucumber-js --tags @ui",
-    "test:api": "cucumber-js --tags @api",
-    "test:smoke": "cucumber-js --tags @smoke",
-    "allure:generate": "allure generate allure-results --clean",
-    "allure:open": "allure open",
-    "clean:allure": "rm -rf allure-results allure-report"
+    "test:ui": "cucumber-js --tags @ui --format progress --format allure-cucumberjs/reporter",
+  "test:api": "cucumber-js --tags @api --format progress --format allure-cucumberjs/reporter",
+  "test:smoke": "cucumber-js --tags @smoke --format progress --format allure-cucumberjs/reporter",
+  "allure:generate": "allure generate allure-results --clean -o allure-report",
+  
+     "allure:open": "allure open allure-report",
+  "clean:allure": "rm -rf allure-results allure-report"
   },
   "keywords": [],
   "author": "",
@@ -19,7 +20,7 @@
   "devDependencies": {
     "@playwright/test": "^1.60.0",
     "@types/node": "^25.9.1",
-    "allure-commandline": "^2.41.0",
+    "allure-commandline": "^2.42.0",
     "allure-cucumberjs": "^3.9.0",
     "allure-playwright": "^3.9.0",
     "cross-env": "^10.1.0",

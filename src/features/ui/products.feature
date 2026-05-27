@@ -60,8 +60,6 @@ Scenario: Search invalid product successfully
 
     And user searches for product "InvalidProduct123"
 
-    Then no searched products should be visible
-
     And no products should be displayed
 
 @ui
@@ -91,3 +89,34 @@ Scenario: Add product to cart successfully
     And user navigates to cart page
 
     Then added product should be visible in cart
+
+@ui
+@regression
+Scenario: UI-013 Add product items into the cart from grid layout
+
+    Given user opens the homepage
+
+    When user clicks on products link
+
+    And user adds multiple products to cart from grid layout
+
+    And user navigates to cart page
+
+    Then cart should contain multiple products
+
+
+@ui
+@regression
+Scenario: UI-014 Modify cart element quantifiers and verify calculation updates
+
+    Given user opens the homepage
+
+    When user clicks on products link
+
+    And user opens first product details page
+
+    And user increases product quantity to 2
+
+    And user navigates to cart page
+
+    Then cart total calculation should update correctly

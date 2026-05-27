@@ -12,7 +12,8 @@ Before(async function (this: CustomWorld) {
   logger.info("Launching browser");
 
   this.browser = await chromium.launch({
-    headless: true,
+     headless: true,
+  slowMo: 500,
   });
 
   this.context = await this.browser.newContext();
@@ -40,10 +41,16 @@ await this.context.route(
 });
 
 After(async function (this: CustomWorld, scenario) {
+
   logger.info(`Scenario Status: ${scenario.result?.status}`);
 
   if (scenario.result?.status === Status.FAILED) {
-    logger.error("Scenario failed. Capturing screenshot.");
+
+    logger.error("Scenario Failed");
+
+    logger.error(`Scenario Name: ${scenario.pickle.name}`);
+
+    logger.error(`Failure Message: ${scenario.result?.message}`);
 
     const screenshot = await this.page.screenshot({
       path: `screenshots/${scenario.pickle.name}.png`,
@@ -61,7 +68,9 @@ After(async function (this: CustomWorld, scenario) {
     const traceFile = fs.readFileSync(tracePath);
 
     await this.attach(traceFile, "application/zip");
+
   } else {
+
     await this.context.tracing.stop();
   }
 

@@ -18,26 +18,30 @@ export class ProductsPage extends BasePage {
   readonly searchedProductsTitle: Locator;
   readonly searchedProductResult: Locator;
   readonly brandsSectionTitle: Locator;
-readonly searchResultCards:Locator;
+  readonly searchResultCards: Locator;
   readonly poloBrandLink: Locator;
-
+  readonly addToCartDetailsButton: Locator;
   readonly brandPageTitle: Locator;
-
+  readonly viewCartLink: Locator;
   readonly productNames: Locator;
   readonly firstProductCard: Locator;
 
   readonly firstAddToCartButton: Locator;
-
+  readonly firstCartRow: Locator;
   readonly continueShoppingButton: Locator;
 
   readonly cartLink: Locator;
 
   readonly cartProductRows: Locator;
   readonly visibleProducts: Locator;
+  readonly quantityInput: Locator;
 
+  readonly cartProductPrice: Locator;
+
+  readonly cartTotalPrice: Locator;
   constructor(page: Page) {
     super(page);
-
+    this.viewCartLink = page.locator('.modal-content a[href="/view_cart"]');
     this.allProductsTitle = page.getByText("All Products");
 
     this.productsGrid = page.locator(".features_items");
@@ -53,7 +57,9 @@ readonly searchResultCards:Locator;
     this.firstViewProductButton = page
       .locator('a[href*="/product_details/"]')
       .first();
-this.searchResultCards = page.locator('.features_items .product-image-wrapper');
+    this.searchResultCards = page.locator(
+      ".features_items .product-image-wrapper",
+    );
     this.productName = page.locator(".product-information h2");
 
     this.productPrice = page.locator(".product-information span span");
@@ -66,9 +72,9 @@ this.searchResultCards = page.locator('.features_items .product-image-wrapper');
     this.searchedProductsTitle = page.locator(
       'h2:has-text("Searched Products")',
     );
-this.searchedProductResult = page.locator(".features_items .productinfo p");
+    this.searchedProductResult = page.locator(".features_items .productinfo p");
     this.brandsSectionTitle = page.locator('h2:has-text("Brands")');
-
+    this.firstCartRow = page.locator("#cart_info tbody tr").first();
     this.poloBrandLink = page.locator('a[href="/brand_products/Polo"]');
 
     this.brandPageTitle = page.locator(".title.text-center");
@@ -84,9 +90,16 @@ this.searchedProductResult = page.locator(".features_items .productinfo p");
       'button:has-text("Continue Shopping")',
     );
 
-   this.cartLink = page.locator('ul.navbar-nav a[href="/view_cart"]');
-   this.cartProductRows = page.locator("#cart_info tbody tr");
+    this.cartLink = page.locator('ul.navbar-nav a[href="/view_cart"]');
+    this.cartProductRows = page.locator("#cart_info tbody tr");
     this.visibleProducts = page.locator(".features_items .col-sm-4:visible");
+    this.quantityInput = page.locator('input[name="quantity"]');
+    this.addToCartDetailsButton = page.locator(
+      ".product-information button.cart",
+    );
+    this.cartProductPrice = this.firstCartRow.locator(".cart_price p");
+
+    this.cartTotalPrice = this.firstCartRow.locator(".cart_total_price");
   }
 
   async openProductsPage(): Promise<void> {
@@ -102,13 +115,9 @@ this.searchedProductResult = page.locator(".features_items .productinfo p");
     await this.clickElement(this.firstViewProductButton);
   }
   async searchProduct(productName: string): Promise<void> {
-    await this.handleAds(); // 👈 ADD
-
     await this.searchInput.waitFor({ state: "visible" });
 
     await this.searchInput.fill(productName);
-
-    await this.handleAds(); // 👈 ADD AGAIN
 
     await this.searchButton.click({ force: true });
 
@@ -125,49 +134,86 @@ this.searchedProductResult = page.locator(".features_items .productinfo p");
         .catch(() => false)) === false
     );
   }
-async selectBrand(brandName: string): Promise<void> {
-  await this.scrollIntoView(this.brandsSectionTitle);
-  await this.closeGoogleVignetteIfPresent();
+  async selectBrand(brandName: string): Promise<void> {
+    await this.scrollIntoView(this.brandsSectionTitle);
+    await this.closeGoogleVignetteIfPresent();
 
-  const brandLocator = this.page.locator(
-    `a[href="/brand_products/${brandName}"]`
-  );
+    const brandLocator = this.page.locator(
+      `a[href="/brand_products/${brandName}"]`,
+    );
 
-  await this.waitForElement(brandLocator);
-  await brandLocator.click();
+    await this.waitForElement(brandLocator);
+    await brandLocator.click();
 
-  await this.waitForPageLoad();
-}
+    await this.waitForPageLoad();
+  }
 
   async getAllProductNames(): Promise<string[]> {
     return await this.productNames.allInnerTexts();
   }
- async addFirstProductToCart(): Promise<void> {
-  await this.handleAds();
-  await this.scrollIntoView(this.firstProductCard);
-  await this.closeGoogleVignetteIfPresent();
-  await this.hoverElement(this.firstProductCard);
-  await this.handleAds();
-  await this.waitForElement(this.firstAddToCartButton);
-  await this.firstAddToCartButton.click({ force: true });
-  // Wait for modal and click "Continue Shopping" if present
-  if (await this.continueShoppingButton.isVisible({ timeout: 3000 }).catch(() => false)) {
-    await this.continueShoppingButton.click();
+  async addFirstProductToCart(): Promise<void> {
+    await this.scrollIntoView(this.firstProductCard);
+    await this.hoverElement(this.firstProductCard);
+    await this.firstAddToCartButton.click();
+
+    // ✅ Wait for modal to appear, but DON'T dismiss it
+    // navigateToCart() will click "View Cart" from the modal
+    await expect(this.viewCartLink).toBeVisible({ timeout: 5000 });
   }
-  await this.page.waitForTimeout(1500);
-}
-async navigateToCart(): Promise<void> {
-  await this.handleAds();
+  async navigateToCart(): Promise<void> {
+    const isModalVisible = await this.viewCartLink.isVisible();
 
-  // wait for either modal OR direct navbar
-const cartLink = this.page.locator('a[href="/view_cart"]').first();
-await expect(cartLink).toBeVisible({ timeout: 15000 });
-await cartLink.click();
+    if (isModalVisible) {
+      await this.viewCartLink.click();
+    } else {
+      // Modal was dismissed — use the navbar cart link instead
+      await this.cartLink.click();
+    }
 
-  await this.page.waitForURL(/view_cart/, { timeout: 15000 });
+    await this.page.waitForURL(/view_cart/, { timeout: 15000 });
 
-  // IMPORTANT: wait for page content
-  await this.page.waitForLoadState("domcontentloaded");
-  await this.page.waitForTimeout(1000);
-}
+    await expect(this.cartProductRows.first()).toBeVisible({ timeout: 15000 });
+  }
+
+  async addProductFromGrid(index: number): Promise<void> {
+    const productCard = this.productCards.nth(index);
+    const addToCartButton = productCard.locator(
+      '.product-overlay a:has-text("Add to cart")',
+    );
+
+    await this.scrollIntoView(productCard);
+    await this.hoverElement(productCard);
+
+    await expect(addToCartButton).toBeVisible({ timeout: 5000 });
+    await addToCartButton.click();
+
+    await expect(this.continueShoppingButton).toBeVisible({ timeout: 5000 });
+    await this.continueShoppingButton.click(); // ✅ dismiss each time
+
+    await this.page.waitForLoadState("domcontentloaded");
+  }
+  async increaseProductQuantity(quantity: number): Promise<void> {
+    await expect(this.quantityInput).toBeVisible();
+
+    await this.quantityInput.clear();
+
+    await this.quantityInput.fill(quantity.toString());
+
+    await this.addToCartDetailsButton.click();
+
+    // Wait for ACTIVE modal
+    await expect(this.viewCartLink).toBeVisible({
+      timeout: 15000,
+    });
+  }
+  async getCartUnitPrice(): Promise<number> {
+    const text = await this.cartProductPrice.textContent();
+
+    return Number(text?.replace(/[^\d]/g, ""));
+  }
+  async getCartTotalPrice(): Promise<number> {
+    const text = await this.cartTotalPrice.textContent();
+
+    return Number(text?.replace(/[^\d]/g, ""));
+  }
 }

@@ -1,54 +1,25 @@
-import { expect, Locator, Page ,} from "@playwright/test";
+import { expect, Locator, Page } from "@playwright/test";
 
 export class BasePage {
   readonly page: Page;
 
   constructor(page: Page) {
-    this.page = page;   
-     this.page.on("domcontentloaded", async () => {
-    await this.handleAds();
-  });
-    this.page.on("load", async () => {
-    await this.handleAds();
-  });
-  this.page.addInitScript(() => {
-  const clean = () =>
-    document.querySelectorAll("iframe, ins, .adsbygoogle").forEach(e => e.remove());
-
-  clean();
-
-  new MutationObserver(clean).observe(document.body, {
-    childList: true,
-    subtree: true,
-  });
-});
-
+    this.page = page;
   }
-async handleAds(): Promise<void> {
-  try {
-    await this.page.evaluate(() => {
-      document.querySelectorAll("iframe, ins, .adsbygoogle").forEach(el => el.remove());
-    });
-  } catch (e) {
-    // ignore silently (ads may block execution)
-  }
-}
   async navigateTo(url: string): Promise<void> {
     await this.page.goto(url, {
-      waitUntil: "domcontentloaded",
+      waitUntil: "load",
+      timeout: 60000,
     });
+
+    await this.page.waitForLoadState("networkidle");
   }
 
-async clickElement(locator: Locator): Promise<void> {
-  await this.handleAds(); // 👈 ADD THIS
-
-  await locator.waitFor({ state: "visible" });
-  await locator.waitFor({ state: "attached" });
-
-  await expect(locator).toBeEnabled();
-
-  await locator.click({ force: true }); // 👈 IMPORTANT FOR ADS
-}
+  async clickElement(locator: Locator): Promise<void> {
+    await locator.waitFor({ state: "visible" });
+    await expect(locator).toBeEnabled();
+    await locator.click();
+  }
 
   async fillText(locator: Locator, text: string): Promise<void> {
     await expect(locator).toBeVisible();
@@ -68,11 +39,8 @@ async clickElement(locator: Locator): Promise<void> {
     await expect(locator).toBeVisible();
   }
   async waitForPageLoad(): Promise<void> {
-
-  await this.page.waitForLoadState(
-    "domcontentloaded",
-  );
-}
+    await this.page.waitForLoadState("domcontentloaded");
+  }
 
   async waitForUrl(url: RegExp): Promise<void> {
     await expect(this.page).toHaveURL(url);
@@ -120,5 +88,4 @@ async clickElement(locator: Locator): Promise<void> {
       await closeButton.click();
     }
   }
-  
 }
